@@ -967,6 +967,19 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
+// ─── HTTP Web Server (Keep-alive/Uptime) ──────────────────────────────────────
+const http = require('http');
+const PORT = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end('Pigeon Bot is flying! 🐦');
+});
+
+server.listen(PORT, () => {
+  console.log(`📡 Web server in ascolto sulla porta ${PORT} per keep-alive.`);
+});
+
 // ─── Login ────────────────────────────────────────────────────────────────────
 const RETRY_INTERVAL = 10_000; // ms tra un tentativo e il successivo
 const MAX_LOGIN_RETRIES = 5;     // oltre questo numero il processo si ferma
