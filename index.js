@@ -5,9 +5,28 @@
 
 require('dotenv').config(); // Carica DISCORD_TOKEN da .env
 
-const { Client, GatewayIntentBits, Partials, ActivityType, MessageFlags, MessageType, ApplicationCommandOptionType, PermissionFlagsBits, ChannelType } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+
+// ─── Auto-generazione config.json da variabile d'ambiente se assente ──────────
+const configPath = path.resolve(__dirname, 'config.json');
+if (!fs.existsSync(configPath)) {
+  if (process.env.CONFIG_JSON) {
+    try {
+      JSON.parse(process.env.CONFIG_JSON);
+      fs.writeFileSync(configPath, process.env.CONFIG_JSON, 'utf8');
+      console.log('✅ File config.json generato correttamente dalla variabile d\'ambiente CONFIG_JSON.');
+    } catch (err) {
+      console.error('❌ Errore nel parsing della variabile CONFIG_JSON:', err.message);
+      process.exit(1);
+    }
+  } else {
+    console.error('❌ Configurazione mancante: config.json non esiste e la variabile CONFIG_JSON non è definita.');
+    process.exit(1);
+  }
+}
+
+const { Client, GatewayIntentBits, Partials, ActivityType, MessageFlags, MessageType, ApplicationCommandOptionType, PermissionFlagsBits, ChannelType } = require('discord.js');
 const config = require('./config.json');
 const { handleMessage } = require('./src/messageHandler');
 const { processedMessages, forwardedMessagesMap, pendingMessages, flushForwardedMap } = require('./src/cache');
