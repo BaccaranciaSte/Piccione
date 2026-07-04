@@ -1,0 +1,88 @@
+{
+  "ignoredChannelIds": [
+    "1487586104365285476"
+  ],
+  "newsReactions": [
+    "1511772687499002017"
+  ],
+  "pigeonStickerId": "1511774355636621493",
+  "pigeonReactionEmojiId": "1511773581829472336",
+  "stickerLogChannelId": "1510269463004577944",
+  "mappings": [
+    {
+      "name": "Soulframe",
+      "roleId": "1487589344440090764",
+      "sourceChannelId": "1501515044507357304",
+      "targetThreadId": "1440680167159632052"
+    },
+    {
+      "name": "Warframe",
+      "roleId": "1487587104216060034",
+      "sourceChannelId": "1501513804679352341",
+      "targetThreadId": "1446435934147973151"
+    },
+    {
+      "name": "Heartopia",
+      "roleId": "1487589613030740028",
+      "sourceChannelId": "1501513824165957714",
+      "targetThreadId": "1472647303209812109"
+    },
+    {
+      "name": "Genshin Impact",
+      "roleId": "1487589966686060616",
+      "sourceChannelId": "1501514264785981451",
+      "targetThreadId": "1448617607203651626"
+    },
+    {
+      "name": "Tenebyss",
+      "roleId": "",
+      "sourceChannelId": "1501731395368915014",
+      "targetThreadId": "1445050297620889611"
+    },
+    {
+      "name": "MH Wilds",
+      "roleId": "1487590133208449085",
+      "sourceChannelId": "1501733332411748412",
+      "targetThreadId": "1434637480933462149"
+    }
+  ],
+  "welcomeGifs": [
+    "https://tenor.com/bXnRq.gif",
+    "https://tenor.com/uzpdpsqfMOA.gif",
+    "https://tenor.com/sLkLBfmdckp.gif",
+    "https://tenor.com/k2mCeO3Lql2.gif",
+    "https://tenor.com/oQbivqjqtb8.gif",
+    "https://tenor.com/t6h7qaXABZO.gif"
+  ],
+  "screamGif": "https://tenor.com/bv1yE.gif",
+  "bestemmiaVideoDir": "./bestemmia",
+  "wowGif": "https://tenor.com/KD3s.gif",
+  "cagaGifs": [
+    "https://tenor.com/bdkjk.gif",
+    "https://tenor.com/oXYS.gif",
+    "https://tenor.com/bGixG.gif"
+  ],
+  "guildSettings": {
+    "default": {
+      "captchaRoleIds": [
+        "1510234225750573086",
+        "1512965698664665230"
+      ],
+      "alertChannelId": "1429932781777059850"
+    },
+    "1499342386491428976": {
+      "captchaRoleIds": [
+        "1521160774536659117",
+        "1521160825057054780"
+      ],
+      "alertChannelId": "1499391982219427964"
+    },
+    "1519464958490837042": {
+      "captchaRoleIds": [
+        "1521176134518313010",
+        "1521176250993872956"
+      ],
+      "alertChannelId": "1520008275092049940"
+    }
+  }
+}

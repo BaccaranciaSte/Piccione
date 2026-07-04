@@ -2,7 +2,7 @@
 node_modules/
 
 # Configurazione con token sensibili
-config.json
+# config.json
 
 # Variabili d'ambiente (contiene il token Discord — NON committare!)
 .env
