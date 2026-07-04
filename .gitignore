@@ -1,0 +1,19 @@
+# Dipendenze
+node_modules/
+
+# Configurazione con token sensibili
+config.json
+
+# Variabili d'ambiente (contiene il token Discord — NON committare!)
+.env
+
+# Stato runtime (generati dal bot)
+state.json
+forwarded.json
+
+# Log
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
