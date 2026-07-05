@@ -960,6 +960,10 @@ client.on('shardResume', (id, replayedEvents) => {
   console.log(`✅ Riconnesso a Discord (shard ${id}). Eventi recuperati: ${replayedEvents}`);
 });
 
+client.on('shardReady', (id) => {
+  console.log(`🌐 WebSocket Discord pronto (shard ${id}). Connessione stabilita.`);
+});
+
 process.on('unhandledRejection', (reason) =>
   console.error('❌ Promise rejection non gestita:', reason)
 );
@@ -1003,6 +1007,9 @@ server.listen(PORT, () => {
 const RETRY_INTERVAL = 10_000; // ms tra un tentativo e il successivo
 const MAX_LOGIN_RETRIES = 5;     // oltre questo numero il processo si ferma
 
+// Timeout per client.login(): se Discord non risponde entro LOGIN_TIMEOUT_MS, fallisce
+const LOGIN_TIMEOUT_MS = 30_000;
+
 async function loginWithRetry(attempt = 0) {
   if (attempt === 0) {
     // Diagnostica: verifica presenza del token prima di tentare il login
@@ -1017,7 +1024,12 @@ async function loginWithRetry(attempt = 0) {
   console.log(`🔄 Tentativo di login Discord (${attempt + 1}/${MAX_LOGIN_RETRIES + 1})...`);
 
   try {
-    await client.login(process.env.DISCORD_TOKEN);
+    await Promise.race([
+      client.login(process.env.DISCORD_TOKEN),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Login timeout dopo ${LOGIN_TIMEOUT_MS / 1000}s — Discord WebSocket non raggiungibile`)), LOGIN_TIMEOUT_MS)
+      ),
+    ]);
   } catch (err) {
     // Errore 401 = token non valido: inutile riprovare
     const status = err.status ?? err.httpStatus;
