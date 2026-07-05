@@ -1004,18 +1004,32 @@ const RETRY_INTERVAL = 10_000; // ms tra un tentativo e il successivo
 const MAX_LOGIN_RETRIES = 5;     // oltre questo numero il processo si ferma
 
 async function loginWithRetry(attempt = 0) {
+  if (attempt === 0) {
+    // Diagnostica: verifica presenza del token prima di tentare il login
+    const tokenPresent = !!(process.env.DISCORD_TOKEN && process.env.DISCORD_TOKEN.trim() !== '');
+    console.log(`🔑 DISCORD_TOKEN presente: ${tokenPresent}`);
+    if (tokenPresent) {
+      const preview = process.env.DISCORD_TOKEN.substring(0, 10) + '...';
+      console.log(`🔑 Token preview: ${preview}`);
+    }
+  }
+
+  console.log(`🔄 Tentativo di login Discord (${attempt + 1}/${MAX_LOGIN_RETRIES + 1})...`);
+
   try {
     await client.login(process.env.DISCORD_TOKEN);
   } catch (err) {
     // Errore 401 = token non valido: inutile riprovare
     const status = err.status ?? err.httpStatus;
+    console.error(`❌ Login fallito — status: ${status}, messaggio: ${err.message}`);
+
     if (status === 401) {
-      console.error('❌ Token non valido (401). Controlla il file .env e riavvia il bot.');
+      console.error('❌ Token non valido (401). Controlla le variabili d\'ambiente su Render e riavvia il bot.');
       process.exit(1);
     }
 
     if (attempt >= MAX_LOGIN_RETRIES) {
-      console.error(`❌ Login fallito ${MAX_LOGIN_RETRIES + 1} volte consecutive. Arresto.`);
+      console.error(`❌ Login fallito ${MAX_LOGIN_RETRIES + 1} volte consecutive. Arresto del processo.`);
       process.exit(1);
     }
 
