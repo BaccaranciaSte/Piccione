@@ -166,7 +166,7 @@ const client = new Client({
 });
 
 // ─── Ready Event ──────────────────────────────────────────────────────────────
-client.once('clientReady', async () => {
+client.once('ready', async () => {
   console.log(`✅ NewsBot online come: ${client.user.tag}`);
 
   // ─── Registrazione dei comandi dell'applicazione (Slash Commands) ─────────────────
