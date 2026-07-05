@@ -1004,8 +1004,8 @@ server.listen(PORT, () => {
 });
 
 // ─── Login ────────────────────────────────────────────────────────────────────
-const RETRY_INTERVAL = 10_000; // ms tra un tentativo e il successivo
-const MAX_LOGIN_RETRIES = 5;     // oltre questo numero il processo si ferma
+const RETRY_INTERVAL = 10_000; // ms base tra un tentativo e il successivo (backoff esponenziale)
+const MAX_LOGIN_RETRIES = 5;   // oltre questo numero il processo si ferma
 
 // Timeout per client.login(): se Discord non risponde entro LOGIN_TIMEOUT_MS, fallisce
 const LOGIN_TIMEOUT_MS = 30_000;
@@ -1041,15 +1041,17 @@ async function loginWithRetry(attempt = 0) {
     }
 
     if (attempt >= MAX_LOGIN_RETRIES) {
-      console.error(`❌ Login fallito ${MAX_LOGIN_RETRIES + 1} volte consecutive. Arresto del processo.`);
-      process.exit(1);
+      console.error(`❌ Login fallito ${MAX_LOGIN_RETRIES + 1} volte consecutive. Render riavvierà il processo.`);
+      process.exit(1); // Render rileva exit(1) e fa restart automatico
     }
 
-    console.error(
-      `❌ Login fallito (${err.message}). Tentativo ${attempt + 1}/${MAX_LOGIN_RETRIES + 1}. ` +
-      `Nuovo tentativo in ${RETRY_INTERVAL / 1000}s...`
-    );
-    setTimeout(() => loginWithRetry(attempt + 1), RETRY_INTERVAL);
+    // Distruggi il client prima di ritentare — evita stato WebSocket inconsistente
+    try { client.destroy(); } catch (_) { /* ignora */ }
+
+    // Backoff esponenziale: 10s -> 20s -> 40s -> 80s -> 160s
+    const waitMs = RETRY_INTERVAL * Math.pow(2, attempt);
+    console.error(`⏳ Nuovo tentativo in ${waitMs / 1000}s... (${attempt + 1}/${MAX_LOGIN_RETRIES + 1})`);
+    setTimeout(() => loginWithRetry(attempt + 1), waitMs);
   }
 }
 
