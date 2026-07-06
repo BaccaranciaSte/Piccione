@@ -952,8 +952,55 @@ client.on('shardError', error => {
   }, SHARD_ERROR_THROTTLE_MS);
 });
 
+// ─── Circuit Breaker: evita riconnessioni troppo frequenti ───────────────────
+// Se Discord si disconnette troppe volte in poco tempo, blocchiamo le riconnessioni
+// automatiche di discord.js e aspettiamo prima di riprovare, per non finire
+// in rate limit sull'IP di Render.
+const CB_WINDOW_MS     = 5 * 60 * 1000; // finestra temporale: 5 minuti
+const CB_THRESHOLD     = 4;              // max disconnessioni tollerate nella finestra
+const CB_COOLDOWN_MS   = 5 * 60 * 1000; // pausa prima di riconnettersi
+
+const _cbTimestamps = []; // sliding window dei timestamp di disconnessione
+let   _cbActive     = false;
+
+function handleCircuitBreaker(shardId) {
+  if (_cbActive) {
+    console.warn(`🔌 Circuit breaker già attivo — disconnessione shard ${shardId} ignorata.`);
+    return;
+  }
+
+  const now = Date.now();
+  // Sliding window: scarta timestamp fuori dalla finestra
+  while (_cbTimestamps.length > 0 && _cbTimestamps[0] < now - CB_WINDOW_MS) {
+    _cbTimestamps.shift();
+  }
+  _cbTimestamps.push(now);
+
+  console.log(`🔌 Disconnessioni recenti: ${_cbTimestamps.length}/${CB_THRESHOLD} (finestra ${CB_WINDOW_MS / 60000}min)`);
+
+  if (_cbTimestamps.length >= CB_THRESHOLD) {
+    _cbActive = true;
+    _cbTimestamps.length = 0; // reset contatore
+    const waitMin = CB_COOLDOWN_MS / 60000;
+    console.warn(
+      `⚠️  CIRCUIT BREAKER ATTIVATO: troppe disconnessioni ravvicinate. ` +
+      `Pausa di ${waitMin} minuti per evitare rate limit Discord.`
+    );
+
+    // Distruggi il client per bloccare le riconnessioni automatiche di discord.js
+    try { client.destroy(); } catch (_) { /* ignora */ }
+
+    setTimeout(() => {
+      _cbActive = false;
+      console.log(`✅ Circuit breaker disattivato. Riconnessione a Discord...`);
+      loginWithRetry(0);
+    }, CB_COOLDOWN_MS);
+  }
+}
+
 client.on('shardDisconnect', (event, id) => {
-  console.log(`⚠️  Disconnesso da Discord (shard ${id}). Motivo: ${event.reason || 'sconosciuto'} (Codice: ${event.code}). Riconnessione automatica in corso...`);
+  console.log(`⚠️  Disconnesso da Discord (shard ${id}). Motivo: ${event.reason || 'sconosciuto'} (Codice: ${event.code}).`);
+  handleCircuitBreaker(id);
 });
 
 client.on('shardResume', (id, replayedEvents) => {
