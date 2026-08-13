@@ -250,9 +250,9 @@ function finalize(payload, roleMention) {
   const firstPayload = { ...payload, content: chunks[0] };
   const payloads = [addTranslateButton(firstPayload, roleMention)];
 
-  // Payload di continuazione: solo testo, nessun embed, nessun file, nessun bottone.
+  // Payload di continuazione: solo testo + bottone traduci (senza header né embed né file).
   for (let i = 1; i < chunks.length; i++) {
-    payloads.push({ content: chunks[i] });
+    payloads.push(addTranslateButton({ content: chunks[i] }, null));
   }
 
   return payloads;

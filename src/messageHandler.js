@@ -112,12 +112,28 @@ async function handleMessage(client, message, mapping, configOverride) {
       await handleForumDefaultReaction(client, thread, sentMessage);
     }
 
-    // Messaggi di continuazione (quando il testo supera 2000 char): nessun tracciamento.
+    // Messaggi di continuazione (quando il testo supera 2000 char).
     for (let i = 1; i < payloads.length; i++) {
       await sleep(CONTINUATION_DELAY_MS);
-      await sendWithRetry(thread, payloads[i], `${message.id}[cont-${i}]`);
+      const contMessage = await sendWithRetry(thread, payloads[i], `${message.id}[cont-${i}]`);
       console.log(`✅ Continuazione ${i}/${payloads.length - 1} per messaggio ${message.id} inviata.`);
+
+      if (contMessage) {
+        // Stesse reazioni del primo messaggio
+        const emojisToReact = mapping.newsReactions || cfg.newsReactions;
+        if (emojisToReact && Array.isArray(emojisToReact)) {
+          for (const emoji of emojisToReact) {
+            if (emoji && emoji.trim() !== '') {
+              await contMessage.react(emoji.trim()).catch(err => {
+                console.error(`❌ Errore reazione ${emoji} su continuazione ${contMessage.id}:`, err.message);
+              });
+            }
+          }
+        }
+        await handleForumDefaultReaction(client, thread, contMessage);
+      }
     }
+
 
     saveState(message.channelId, message.id);
     return sentMessage;
