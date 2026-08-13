@@ -44,6 +44,60 @@
       "roleId": "1487590133208449085",
       "sourceChannelId": "1501733332411748412",
       "targetThreadId": "1434637480933462149"
+    },
+    {
+      "name": "EthrA",
+      "roleId": "1537404391655481344",
+      "sourceChannelId": "1537396155292450898",
+      "targetThreadId": "1537400774881976410"
+    },
+    {
+      "name": "Palworld",
+      "roleId": "1537407033123414116",
+      "sourceChannelId": "1525466585949536278",
+      "targetThreadId": "1537406539533647902"
+    },
+    {
+      "name": "Far Far West",
+      "roleId": "1537410643202678784",
+      "sourceChannelId": "1510062392988663809",
+      "targetThreadId": "1537410191094583358"
+    },
+    {
+      "name": "Project Zomboid",
+      "roleId": "1537408482213498880",
+      "sourceChannelId": "1513466901479817296",
+      "targetThreadId": "1537408054033911868"
+    },
+    {
+      "name": "Temtem",
+      "roleId": "1537412483252355165",
+      "sourceChannelId": "1510062311035895879",
+      "targetThreadId": "1537412165827563610"
+    },
+    {
+      "name": "Hytale",
+      "roleId": "1537413516854558771",
+      "sourceChannelId": "1509998285480525997",
+      "targetThreadId": "1537413163832713216"
+    },
+    {
+      "name": "HELLDIVERS 2",
+      "roleId": "1537415203518419044",
+      "sourceChannelId": "1509997378856419551",
+      "targetThreadId": "1537414940065800212"
+    },
+    {
+      "name": "No Man's Sky",
+      "roleId": "1537416196780200048",
+      "sourceChannelId": "1509997127881986268",
+      "targetThreadId": "1537415907003863131"
+    },
+    {
+      "name": "PokeMMO",
+      "roleId": "1537417651523952720",
+      "sourceChannelId": "1509995807133401119",
+      "targetThreadId": "1537417365674000395"
     }
   ],
   "welcomeGifs": [
