@@ -69,15 +69,18 @@ function isExpiredMessage(message, mapping) {
   return false;
 }
 
+const { getIgnoredKeyword } = require('./keywordFilter');
+
 /**
- * Pulisce i messaggi già scaduti inviati dal bot all'interno di un thread specifico.
+ * Pulisce i messaggi già scaduti o che contengono keyword ignorate inviati dal bot all'interno di un thread specifico.
  * Utile per rimuovere la "sporcizia" residua già presente nella chat del thread.
  *
  * @param {import('discord.js').Client} client
  * @param {import('discord.js').ThreadChannel} thread
  * @param {number} [limit=50] - Numero di messaggi recenti da controllare
+ * @param {object} [mapping] - Riferimento al mapping di configurazione
  */
-async function cleanupExistingExpiredInThread(client, thread, limit = 50) {
+async function cleanupExistingExpiredInThread(client, thread, limit = 50, mapping = null) {
   if (!thread || typeof thread.isThread !== 'function' || !thread.isThread()) return;
 
   try {
@@ -89,9 +92,12 @@ async function cleanupExistingExpiredInThread(client, thread, limit = 50) {
       // Pulisce solo i messaggi inviati dal bot stesso per evitare di cancellare messaggi degli utenti
       if (msg.author?.id !== client.user.id) continue;
 
-      if (isExpiredMessage(msg, { deleteOnExpire: true })) {
+      const isExpired = isExpiredMessage(msg, { deleteOnExpire: true });
+      const matchedKeyword = getIgnoredKeyword(msg, mapping);
+
+      if (isExpired || matchedKeyword) {
         await msg.delete().catch(err => {
-          console.warn(`⚠️ Impossibile eliminare vecchio messaggio scaduto ${msg.id} nel thread ${thread.id}:`, err.message);
+          console.warn(`⚠️ Impossibile eliminare vecchio messaggio ${msg.id} nel thread ${thread.id}:`, err.message);
         });
         deletedCount++;
         // Piccola pausa tra le eliminazioni per evitare rate limit di Discord
@@ -100,10 +106,10 @@ async function cleanupExistingExpiredInThread(client, thread, limit = 50) {
     }
 
     if (deletedCount > 0) {
-      console.log(`🧹 Pulizia completata nel thread ${thread.id}: rimossi ${deletedCount} messaggi scaduti.`);
+      console.log(`🧹 Pulizia completata nel thread ${thread.id}: rimossi ${deletedCount} messaggi scaduti/ignorati.`);
     }
   } catch (err) {
-    console.error(`❌ Errore durante la pulizia dei vecchi messaggi scaduti nel thread ${thread.id}:`, err.message);
+    console.error(`❌ Errore durante la pulizia dei vecchi messaggi nel thread ${thread.id}:`, err.message);
   }
 }
 

@@ -10,6 +10,7 @@ const { saveState } = require('./state');
 const { sleep } = require('./utils');
 const { handleForumDefaultReaction } = require('./forumReaction');
 const { isExpiredMessage } = require('./expireHandler');
+const { getIgnoredKeyword } = require('./keywordFilter');
 const config = require('../config.json');
 
 
@@ -45,6 +46,15 @@ async function handleMessage(client, message, mapping, configOverride) {
   // ── 0. Check se il messaggio originale è un alert già scaduto ──────────────
   if (isExpiredMessage(message, mapping)) {
     console.log(`⚠️  Messaggio ${message.id} in ${message.channelId} è un alert già scaduto — inoltro saltato.`);
+    processedMessages.add(message.id);
+    saveState(message.channelId, message.id);
+    return;
+  }
+
+  // ── 0.1. Check se il messaggio contiene parole/frasi ignorate ───────────────
+  const matchedKeyword = getIgnoredKeyword(message, mapping, cfg);
+  if (matchedKeyword) {
+    console.log(`🚫 Messaggio ${message.id} in ${message.channelId} contiene la keyword/frase ignorata "${matchedKeyword}" — inoltro saltato.`);
     processedMessages.add(message.id);
     saveState(message.channelId, message.id);
     return;

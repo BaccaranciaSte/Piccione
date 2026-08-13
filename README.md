@@ -55,14 +55,16 @@ Modifica `config.json`:
 ```json
 {
   "token": "IL_TUO_BOT_TOKEN",
+  "ignoredKeywords": [],
   "mappings": [
     {
+      "name": "HELLDIVERS 2",
       "sourceChannelId": "123456789012345678",
-      "targetThreadId":  "987654321098765432"
-    },
-    {
-      "sourceChannelId": "111222333444555666",
-      "targetThreadId":  "666555444333222111"
+      "targetThreadId":  "987654321098765432",
+      "ignoredKeywords": [
+        "survey",
+        "fill it out"
+      ]
     }
   ]
 }

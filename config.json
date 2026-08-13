@@ -2,6 +2,7 @@
   "ignoredChannelIds": [
     "1487586104365285476"
   ],
+  "ignoredKeywords": [],
   "newsReactions": [
     "1511772687499002017"
   ],
@@ -85,7 +86,11 @@
       "name": "HELLDIVERS 2",
       "roleId": "1537415203518419044",
       "sourceChannelId": "1509997378856419551",
-      "targetThreadId": "1537414940065800212"
+      "targetThreadId": "1537414940065800212",
+      "ignoredKeywords": [
+        "survey",
+        "fill it out"
+      ]
     },
     {
       "name": "No Man's Sky",

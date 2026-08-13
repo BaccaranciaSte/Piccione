@@ -309,11 +309,12 @@ async function catchUpMissedMessages(client, mappings) {
           }
         }
       }
-      // Se il mapping prevede la cancellazione degli alert scaduti, pulisci la sporcizia residua nel thread
-      if (m.deleteOnExpire) {
+      // Se il mapping prevede la cancellazione degli alert scaduti o keyword ignorate, pulisci la sporcizia residua nel thread
+      const hasIgnoredKw = (m.ignoredKeywords && m.ignoredKeywords.length > 0) || (config.ignoredKeywords && config.ignoredKeywords.length > 0);
+      if (m.deleteOnExpire || hasIgnoredKw) {
         const thread = await resolveThread(client, m.targetThreadId);
         if (thread) {
-          await cleanupExistingExpiredInThread(client, thread, 50);
+          await cleanupExistingExpiredInThread(client, thread, 50, m);
         }
       }
     } catch (err) {
