@@ -35,6 +35,8 @@ const { buildForwardPayload } = require('./src/payloadBuilder');
 const { resolveThread } = require('./src/threadResolver');
 const { containsInsult, BRAINROT_GIFS, containsBestemmia, isScream, isWow } = require('./src/insults');
 const { containsBird } = require('./src/birds');
+const { getForumDefaultEmoji, reactIfNotReacted, handleForumDefaultReaction } = require('./src/forumReaction');
+const { isExpiredMessage, cleanupExistingExpiredInThread } = require('./src/expireHandler');
 const translate = require('google-translate-api-x');
 const { sleep } = require('./src/utils');
 
@@ -155,6 +157,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.GuildMembers,
@@ -162,6 +165,7 @@ const client = new Client({
   partials: [
     Partials.Message,
     Partials.Channel,
+    Partials.Reaction,
   ],
 });
 
@@ -303,6 +307,13 @@ async function catchUpMissedMessages(client, mappings) {
           } finally {
             pendingMessages.delete(msg.id);
           }
+        }
+      }
+      // Se il mapping prevede la cancellazione degli alert scaduti, pulisci la sporcizia residua nel thread
+      if (m.deleteOnExpire) {
+        const thread = await resolveThread(client, m.targetThreadId);
+        if (thread) {
+          await cleanupExistingExpiredInThread(client, thread, 50);
         }
       }
     } catch (err) {
@@ -580,6 +591,14 @@ client.on('messageCreate', async (message) => {
       // Non facciamo return: il messaggio può ancora essere inoltrato se necessario
     }
 
+    // ── Reazione alle emoji predefinite dei forum (pre-emoji) ───
+    if (message.channel?.isThread?.()) {
+      const defaultEmoji = await getForumDefaultEmoji(message.channel);
+      if (defaultEmoji) {
+        await reactIfNotReacted(client, message, defaultEmoji);
+      }
+    }
+
     // Lookup O(1) tramite Map invece di Array.find O(n)
     const mapping = mappingIndex.get(message.channelId);
     if (!mapping) return;
@@ -598,6 +617,24 @@ client.on('messageCreate', async (message) => {
 
   } catch (err) {
     console.error('❌ Errore imprevisto in messageCreate:', err);
+  }
+});
+
+// ─── Evento Thread Create (Nuovi post nei canali Forum) ───────────────────────
+client.on('threadCreate', async (thread) => {
+  try {
+    const defaultEmoji = await getForumDefaultEmoji(thread);
+    if (!defaultEmoji) return;
+
+    // Attende che lo starter message sia presente su Discord
+    await sleep(1000);
+
+    const starterMessage = await thread.fetchStarterMessage().catch(() => null);
+    if (starterMessage) {
+      await reactIfNotReacted(client, starterMessage, defaultEmoji);
+    }
+  } catch (err) {
+    console.error(`❌ Errore nella gestione threadCreate per il thread ${thread.id}:`, err.message);
   }
 });
 
@@ -803,6 +840,26 @@ client.on('messageUpdate', async (oldMessage, newMessage) => {
     // Controlla se abbiamo già inoltrato questo messaggio in precedenza
     const forwarded = forwardedMessagesMap.get(newMessage.id);
     if (forwarded) {
+      // ── Controlla se l'alert è scaduto ──────────────────────────────────────
+      if (isExpiredMessage(newMessage, mapping)) {
+        console.log(`🗑️ Alert scaduto per il messaggio ${newMessage.id} → eliminazione dal thread ${forwarded.threadId}`);
+        try {
+          const thread = await resolveThread(client, forwarded.threadId);
+          if (thread) {
+            const forwardedMessage = await thread.messages.fetch(forwarded.sentMessageId).catch(() => null);
+            if (forwardedMessage) {
+              await forwardedMessage.delete();
+              console.log(`✅ Messaggio scaduto ${forwarded.sentMessageId} eliminato dal thread con successo.`);
+            }
+          }
+        } catch (err) {
+          console.error(`❌ Errore durante l'eliminazione del messaggio scaduto ${newMessage.id}:`, err.message);
+        } finally {
+          forwardedMessagesMap.delete(newMessage.id);
+        }
+        return;
+      }
+
       console.log(`🔄 Rilevato edit per il messaggio ${newMessage.id} → aggiornamento nel thread ${forwarded.threadId}`);
       try {
         const thread = await resolveThread(client, forwarded.threadId);

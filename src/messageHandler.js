@@ -8,6 +8,8 @@ const { buildForwardPayload } = require('./payloadBuilder');
 const { resolveThread } = require('./threadResolver');
 const { saveState } = require('./state');
 const { sleep } = require('./utils');
+const { handleForumDefaultReaction } = require('./forumReaction');
+const { isExpiredMessage } = require('./expireHandler');
 const config = require('../config.json');
 
 
@@ -38,6 +40,14 @@ async function handleMessage(client, message, mapping, configOverride) {
   // Segnala se il messaggio contiene snapshot (forward nativo Discord)
   if (message.messageSnapshots?.size > 0) {
     console.log(`   ↳ 📎 Messaggio inoltrato (forward) con ${message.messageSnapshots.size} snapshot — estrazione contenuti in corso...`);
+  }
+
+  // ── 0. Check se il messaggio originale è un alert già scaduto ──────────────
+  if (isExpiredMessage(message, mapping)) {
+    console.log(`⚠️  Messaggio ${message.id} in ${message.channelId} è un alert già scaduto — inoltro saltato.`);
+    processedMessages.add(message.id);
+    saveState(message.channelId, message.id);
+    return;
   }
 
   // ── 1. Risolvi il thread di destinazione (gestisce anche quelli archiviati)
@@ -82,6 +92,9 @@ async function handleMessage(client, message, mapping, configOverride) {
           }
         }
       }
+
+      // Aggiunge la reazione predefinita del canale Forum (se presente e non ancora aggiunta)
+      await handleForumDefaultReaction(client, thread, sentMessage);
     }
 
     saveState(message.channelId, message.id);

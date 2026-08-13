@@ -97,7 +97,8 @@
       "name": "PokeMMO",
       "roleId": "1537417651523952720",
       "sourceChannelId": "1509995807133401119",
-      "targetThreadId": "1537417365674000395"
+      "targetThreadId": "1537417365674000395",
+      "deleteOnExpire": true
     }
   ],
   "welcomeGifs": [
