@@ -873,8 +873,11 @@ client.on('messageUpdate', async (oldMessage, newMessage) => {
           return;
         }
 
-        // Costruisci il nuovo payload per l'edit
-        const payload = buildForwardPayload(newMessage, mapping);
+        // Costruisci il nuovo payload per l'edit.
+        // buildForwardPayload ritorna un array: per l'edit usiamo solo il primo elemento,
+        // che corrisponde al messaggio originalmente inviato e tracciato in forwardedMessagesMap.
+        const payloads = buildForwardPayload(newMessage, mapping);
+        const payload = payloads[0];
 
         // Discord non consente di modificare i file allegati (attachment) di messaggi già inviati.
         // Estraiamo files dal payload lasciando solo contenuto testuale ed embed.

@@ -13,6 +13,9 @@ const { isExpiredMessage } = require('./expireHandler');
 const { getIgnoredKeyword } = require('./keywordFilter');
 const config = require('../config.json');
 
+// Delay tra un chunk di continuazione e il successivo (evita rate-limit)
+const CONTINUATION_DELAY_MS = 400;
+
 
 // ─── Costanti ─────────────────────────────────────────────────────────────────
 const MAX_RETRIES = 3;       // Tentativi aggiuntivi in caso di errore temporaneo
@@ -64,13 +67,14 @@ async function handleMessage(client, message, mapping, configOverride) {
   const thread = await resolveThread(client, targetThreadId);
   if (!thread) return; // resolveThread ha già loggato l'errore
 
-  // ── 2. Costruisci il payload ──────────────────────────────────────────────
-  const payload = buildForwardPayload(message, mapping);
+  // ── 2. Costruisci il payload (ritorna un array di 1+ payload) ──────────────
+  const payloads = buildForwardPayload(message, mapping);
+  const firstPayload = payloads[0];
 
   // Se non c'è nulla da inviare, salta silenziosamente.
   // Marca comunque il messaggio come processato e aggiorna lo state,
   // così non verrà ricontrollato inutilmente ad ogni riavvio del bot.
-  if (!payload.content && (!payload.embeds || payload.embeds.length === 0) && (!payload.files || payload.files.length === 0)) {
+  if (!firstPayload.content && (!firstPayload.embeds || firstPayload.embeds.length === 0) && (!firstPayload.files || firstPayload.files.length === 0)) {
     console.log(`⚠️  Messaggio ${message.id} vuoto, nulla da inoltrare. Marcato come processato per evitare re-check.`);
     processedMessages.add(message.id);
     saveState(message.channelId, message.id);
@@ -82,9 +86,10 @@ async function handleMessage(client, message, mapping, configOverride) {
 
   // ── 4. Invia con retry automatico ────────────────────────────────────────
   try {
-    const sentMessage = await sendWithRetry(thread, payload, message.id);
+    // Primo messaggio: tracciato, reazioni applicate.
+    const sentMessage = await sendWithRetry(thread, firstPayload, message.id);
     console.log(`✅ Messaggio ${message.id} inoltrato al thread ${targetThreadId}`);
-    
+
     if (sentMessage) {
       forwardedMessagesMap.set(message.id, {
         threadId: thread.id,
@@ -105,6 +110,13 @@ async function handleMessage(client, message, mapping, configOverride) {
 
       // Aggiunge la reazione predefinita del canale Forum (se presente e non ancora aggiunta)
       await handleForumDefaultReaction(client, thread, sentMessage);
+    }
+
+    // Messaggi di continuazione (quando il testo supera 2000 char): nessun tracciamento.
+    for (let i = 1; i < payloads.length; i++) {
+      await sleep(CONTINUATION_DELAY_MS);
+      await sendWithRetry(thread, payloads[i], `${message.id}[cont-${i}]`);
+      console.log(`✅ Continuazione ${i}/${payloads.length - 1} per messaggio ${message.id} inviata.`);
     }
 
     saveState(message.channelId, message.id);

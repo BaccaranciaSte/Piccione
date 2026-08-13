@@ -16,7 +16,9 @@
  * Note: allegati con URL CDN scaduti (parametro ?ex= nella URL) vengono esclusi.
  * Note: si preferisce proxyURL (media.discordapp.net) a url (cdn.discordapp.com)
  *       perché più stabile e longevo, specialmente durante il catchup offline.
- * Note: il content viene troncato a MAX_CONTENT_LENGTH per rispettare il limite API Discord.
+ * Note: buildForwardPayload restituisce un ARRAY di payload. Il primo contiene header,
+ *       embed, files e bottone. I payload successivi (se il testo supera 2000 char)
+ *       contengono solo il testo rimanente, senza ripetere l'header.
  */
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -25,7 +27,6 @@ const { sanitizeText } = require('./sanitizer');
 const MAX_EMBEDS = 10;          // Limite hard Discord API per embed per messaggio
 const MAX_FILES  = 10;          // Limite hard Discord API per allegati per messaggio
 const MAX_CONTENT_LENGTH = 2000; // Limite hard Discord API per content (caratteri)
-const TRUNCATION_SUFFIX = '\n…[troncato]';
 
 /**
  * Estrae contenuti (testo, embed, allegati) dai messageSnapshots di un messaggio inoltrato
@@ -151,7 +152,7 @@ function buildForwardPayload(message, mapping) {
 
   if (!hasContent && !hasEmbeds && !hasMedia && !hasOther) {
     console.log(`⏭️  buildForwardPayload: nessun contenuto valido (embed non-rich, allegati scaduti o snapshot vuoto). Messaggio scartato.`);
-    return {};   // handleMessage controlla !content && !embeds && !files → skip silenzioso
+    return [{}];   // handleMessage controlla !content && !embeds && !files → skip silenzioso
   }
 
   const payload = {};
@@ -227,28 +228,61 @@ function buildForwardPayload(message, mapping) {
 }
 
 /**
- * Finalizza il payload: tronca il content se necessario e aggiunge il bottone traduci.
+ * Finalizza il payload: se il content supera MAX_CONTENT_LENGTH lo spezza in più payload.
+ * Restituisce sempre un array:
+ *   - [0]: payload principale (header, embed, files, bottone traduci)
+ *   - [1..N]: payload di continuazione (solo testo, senza header né bottoni)
+ *
  * @param {import('discord.js').MessageCreateOptions} payload
  * @param {string|null} roleMention
- * @returns {import('discord.js').MessageCreateOptions}
+ * @returns {import('discord.js').MessageCreateOptions[]}
  */
 function finalize(payload, roleMention) {
-  truncateContent(payload);
-  return addTranslateButton(payload, roleMention);
+  if (!payload.content || payload.content.length <= MAX_CONTENT_LENGTH) {
+    return [addTranslateButton(payload, roleMention)];
+  }
+
+  // Il content supera il limite: spezziamolo in chunk.
+  const chunks = splitContent(payload.content, MAX_CONTENT_LENGTH);
+  console.warn(`⚠️  Content suddiviso in ${chunks.length} messaggi (totale: ${payload.content.length} char).`);
+
+  // Primo payload: prende il primo chunk e mantiene embed/files/bottone.
+  const firstPayload = { ...payload, content: chunks[0] };
+  const payloads = [addTranslateButton(firstPayload, roleMention)];
+
+  // Payload di continuazione: solo testo, nessun embed, nessun file, nessun bottone.
+  for (let i = 1; i < chunks.length; i++) {
+    payloads.push({ content: chunks[i] });
+  }
+
+  return payloads;
 }
 
 /**
- * Tronca payload.content a MAX_CONTENT_LENGTH caratteri per rispettare il limite API Discord.
- * Aggiunge un suffisso "…[troncato]" per indicare che il contenuto è stato tagliato.
- * @param {import('discord.js').MessageCreateOptions} payload
+ * Spezza una stringa in chunk di al massimo `limit` caratteri.
+ * Cerca di tagliare sull'ultimo newline disponibile nel chunk per non spezzare le righe
+ * a metà; se non ci sono newline, taglia al limite esatto.
+ *
+ * @param {string} text
+ * @param {number} limit
+ * @returns {string[]}
  */
-function truncateContent(payload) {
-  if (!payload.content || payload.content.length <= MAX_CONTENT_LENGTH) return;
+function splitContent(text, limit) {
+  const chunks = [];
+  let remaining = text;
 
-  const originalLength = payload.content.length;
-  const maxLen = MAX_CONTENT_LENGTH - TRUNCATION_SUFFIX.length;
-  payload.content = payload.content.substring(0, maxLen) + TRUNCATION_SUFFIX;
-  console.warn(`⚠️  Content troncato a ${MAX_CONTENT_LENGTH} caratteri (originale: ${originalLength} char).`);
+  while (remaining.length > limit) {
+    // Cerca l'ultimo newline entro il limite per un taglio pulito.
+    const slice = remaining.substring(0, limit);
+    const lastNewline = slice.lastIndexOf('\n');
+    const cutAt = lastNewline > 0 ? lastNewline + 1 : limit;
+
+    chunks.push(remaining.substring(0, cutAt).trimEnd());
+    remaining = remaining.substring(cutAt).trimStart();
+  }
+
+  if (remaining.length > 0) chunks.push(remaining);
+  return chunks;
 }
 
 function addTranslateButton(payload, roleMention) {
@@ -337,4 +371,4 @@ function isUrlExpired(url) {
   }
 }
 
-module.exports = { buildForwardPayload };
+module.exports = { buildForwardPayload, splitContent };
