@@ -11,6 +11,7 @@ const { sleep } = require('./utils');
 const { handleForumDefaultReaction } = require('./forumReaction');
 const { isExpiredMessage } = require('./expireHandler');
 const { getIgnoredKeyword } = require('./keywordFilter');
+const { isRoleMentionOnCooldown, recordRoleMention } = require('./roleMentionCooldown');
 const config = require('../config.json');
 
 // Delay tra un chunk di continuazione e il successivo (evita rate-limit)
@@ -68,7 +69,14 @@ async function handleMessage(client, message, mapping, configOverride) {
   if (!thread) return; // resolveThread ha già loggato l'errore
 
   // ── 2. Costruisci il payload (ritorna un array di 1+ payload) ──────────────
-  const payloads = buildForwardPayload(message, mapping);
+  // Se il role mention è in cooldown, costruiamo il payload senza roleId
+  // per evitare ping in raffica quando arrivano più notizie di fila.
+  const hasCooldown = mapping.roleId && isRoleMentionOnCooldown(message.channelId, mapping, cfg);
+  if (hasCooldown) {
+    console.log(`🔕 Role mention soppressa per ${mapping.name ?? message.channelId} (cooldown attivo).`);
+  }
+  const effectiveMapping = hasCooldown ? { ...mapping, roleId: '' } : mapping;
+  const payloads = buildForwardPayload(message, effectiveMapping);
   const firstPayload = payloads[0];
 
   // Se non c'è nulla da inviare, salta silenziosamente.
@@ -95,6 +103,11 @@ async function handleMessage(client, message, mapping, configOverride) {
         threadId: thread.id,
         sentMessageId: sentMessage.id
       });
+
+      // Registra il timestamp della mention (solo se il ruolo era effettivamente pingato)
+      if (mapping.roleId && !hasCooldown) {
+        recordRoleMention(message.channelId);
+      }
 
       // Aggiunge le reazioni preconfigurate (specifiche del mapping o globali)
       const emojisToReact = mapping.newsReactions || cfg.newsReactions;
