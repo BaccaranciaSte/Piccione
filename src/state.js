@@ -11,6 +11,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { schedulePersist } = require('./gitPersist');
 
 const STATE_FILE = path.join(__dirname, '..', 'state.json');
 
@@ -87,6 +88,7 @@ function writeToDisk() {
   try {
     fs.writeFileSync(STATE_FILE, JSON.stringify(stateCache, null, 2), 'utf8');
     isDirty = false;
+    schedulePersist(); // Persisti su GitHub (no-op in locale)
   } catch (err) {
     console.error('❌ Errore durante il salvataggio di state.json:', err);
   }

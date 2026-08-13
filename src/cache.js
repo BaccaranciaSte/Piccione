@@ -15,6 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { schedulePersist } = require('./gitPersist');
 
 /** Numero massimo di ID messaggi da tenere in memoria. */
 const MAX_CACHE_SIZE = 5_000;
@@ -90,6 +91,7 @@ function writeForwardedToDisk() {
     const obj = Object.fromEntries(forwardedMessagesMap);
     fs.writeFileSync(FORWARDED_FILE, JSON.stringify(obj, null, 2), 'utf8');
     forwardedDirty = false;
+    schedulePersist(); // Persisti su GitHub (no-op in locale)
   } catch (err) {
     console.error('❌ Errore durante il salvataggio di forwarded.json:', err);
   }

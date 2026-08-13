@@ -39,6 +39,7 @@ const { getForumDefaultEmoji, reactIfNotReacted, handleForumDefaultReaction } = 
 const { isExpiredMessage, cleanupExistingExpiredInThread } = require('./src/expireHandler');
 const translate = require('google-translate-api-x');
 const { sleep } = require('./src/utils');
+const { flushPersist } = require('./src/gitPersist');
 
 // ─── Helper: video casuale da una cartella ────────────────────────────────────
 /**
@@ -1169,3 +1170,17 @@ async function loginWithRetry(attempt = 0) {
 }
 
 loginWithRetry();
+
+// ─── Graceful Shutdown ────────────────────────────────────────────────────────
+// Flusha state.json, forwarded.json e persiste su GitHub prima di uscire.
+function gracefulShutdown(signal) {
+  console.log(`\n🛑 Segnale ${signal} ricevuto — graceful shutdown in corso...`);
+  try { flushState(); } catch (_) {}
+  try { flushForwardedMap(); } catch (_) {}
+  try { flushPersist(); } catch (_) {}
+  console.log('✅ Flush completato. Uscita.');
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
