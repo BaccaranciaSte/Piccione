@@ -46,6 +46,17 @@ const processedMessages = new Set();
  */
 const forwardedMessagesMap = loadForwardedMap();
 
+// Pre-popola processedMessages con gli ID già presenti in forwardedMessagesMap.
+// Questo evita re-invii doppi se state.json non è stato aggiornato all'ultimo
+// secondo prima di un kill forzato (il debounce potrebbe non aver scritto su disco).
+for (const id of forwardedMessagesMap.keys()) {
+  processedMessages.add(id);
+}
+if (processedMessages.size > 0) {
+  console.log(`🛡️  Anti-duplicato: ${processedMessages.size} ID pre-caricati da forwarded.json in processedMessages.`);
+}
+
+
 /** Flag: ci sono modifiche alla mappa non ancora scritte su disco. */
 let forwardedDirty = false;
 
