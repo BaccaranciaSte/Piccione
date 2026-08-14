@@ -105,6 +105,12 @@
       "sourceChannelId": "1509995807133401119",
       "targetThreadId": "1537417365674000395",
       "deleteOnExpire": true
+    },
+    {
+      "name": "DND",
+      "roleId": "1487591827304480838",
+      "sourceChannelId": "1537830516324044851",
+      "targetThreadId": "1463092721295167621"
     }
   ],
   "welcomeGifs": [
