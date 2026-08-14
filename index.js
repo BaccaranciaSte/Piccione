@@ -35,7 +35,7 @@ const { buildForwardPayload } = require('./src/payloadBuilder');
 const { resolveThread } = require('./src/threadResolver');
 const { containsInsult, BRAINROT_GIFS, containsBestemmia, isScream, isWow } = require('./src/insults');
 const { containsBird } = require('./src/birds');
-const { getForumDefaultEmoji, reactIfNotReacted, handleForumDefaultReaction } = require('./src/forumReaction');
+const { handleForumDefaultReaction } = require('./src/forumReaction');
 const { isExpiredMessage, cleanupExistingExpiredInThread } = require('./src/expireHandler');
 const translate = require('google-translate-api-x');
 const { sleep } = require('./src/utils');
@@ -595,10 +595,7 @@ client.on('messageCreate', async (message) => {
 
     // ── Reazione alle emoji predefinite dei forum (pre-emoji) ───
     if (message.channel?.isThread?.()) {
-      const defaultEmoji = await getForumDefaultEmoji(message.channel);
-      if (defaultEmoji) {
-        await reactIfNotReacted(client, message, defaultEmoji);
-      }
+      await handleForumDefaultReaction(client, message.channel, message);
     }
 
     // Lookup O(1) tramite Map invece di Array.find O(n)
@@ -625,15 +622,12 @@ client.on('messageCreate', async (message) => {
 // ─── Evento Thread Create (Nuovi post nei canali Forum) ───────────────────────
 client.on('threadCreate', async (thread) => {
   try {
-    const defaultEmoji = await getForumDefaultEmoji(thread);
-    if (!defaultEmoji) return;
-
     // Attende che lo starter message sia presente su Discord
-    await sleep(1000);
+    await sleep(1500);
 
-    const starterMessage = await thread.fetchStarterMessage().catch(() => null);
+    const starterMessage = await thread.fetchStarterMessage().catch(() => thread.messages.fetch(thread.id).catch(() => null));
     if (starterMessage) {
-      await reactIfNotReacted(client, starterMessage, defaultEmoji);
+      await handleForumDefaultReaction(client, thread, starterMessage);
     }
   } catch (err) {
     console.error(`❌ Errore nella gestione threadCreate per il thread ${thread.id}:`, err.message);
